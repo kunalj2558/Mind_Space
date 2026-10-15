@@ -13,6 +13,7 @@ import 'package:hearme/screens/doctor/patients_list_screen.dart';
 import 'package:hearme/screens/linking/my_code_screen.dart';
 import 'package:hearme/screens/profile/profile_screen.dart';
 import 'package:hearme/screens/welcome/welcome_screen.dart';
+import 'package:hearme/screens/appointments/appointments_list_screen.dart';
 
 class DoctorDashboardScreen extends StatelessWidget {
   const DoctorDashboardScreen({super.key});
@@ -136,6 +137,26 @@ class DoctorDashboardScreen extends StatelessWidget {
                         builder: (_) => const PatientsListScreen()),
                   ),
                 ).animate().fadeIn(delay: 275.ms).slideX(begin: -0.1),
+
+                const SizedBox(height: AppTheme.spacingMedium),
+
+                _buildTile(
+                  context: context,
+                  title: 'Scheduled Consultations',
+                  subtitle: 'Video, Voice & Live Sessions',
+                  icon: Icons.calendar_month_rounded,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0D9488), Color(0xFF059669)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  isDark: isDark,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AppointmentsListScreen()),
+                  ),
+                ).animate().fadeIn(delay: 310.ms).slideX(begin: 0.1),
 
                 const SizedBox(height: AppTheme.spacingMedium),
 

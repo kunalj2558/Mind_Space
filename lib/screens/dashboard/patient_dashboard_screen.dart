@@ -19,6 +19,9 @@ import 'package:hearme/screens/history/chat_history_screen.dart';
 import 'package:hearme/screens/history/mindspace_history_screen.dart';
 import 'package:hearme/screens/profile/profile_screen.dart';
 import 'package:hearme/screens/welcome/welcome_screen.dart';
+import 'package:hearme/screens/marketplace/clinician_directory_screen.dart';
+import 'package:hearme/screens/appointments/appointments_list_screen.dart';
+import 'package:hearme/screens/safety/crisis_resources_sheet.dart';
 
 class PatientDashboardScreen extends StatelessWidget {
   const PatientDashboardScreen({super.key});
@@ -134,6 +137,11 @@ class PatientDashboardScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.emergency_outlined, color: Colors.redAccent, size: 22),
+                      tooltip: '24/7 Crisis Support',
+                      onPressed: () => CrisisResourcesSheet.show(context),
+                    ),
                     const ThemeToggleButton(),
                   ],
                 ).animate().fadeIn(duration: 400.ms),
@@ -253,6 +261,84 @@ class PatientDashboardScreen extends StatelessWidget {
 
                         const SizedBox(height: AppTheme.spacingMedium),
 
+                        // V2 Hero: Verified Specialists & Consultations
+                        GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ClinicianDirectoryScreen(),
+                            ),
+                          ),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(AppTheme.spacingLarge),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF0D9488), Color(0xFF059669)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius:
+                                  BorderRadius.circular(AppTheme.radiusLarge),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF059669).withValues(alpha: 0.3),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Row(
+                                        children: [
+                                          Icon(Icons.verified_rounded, color: Colors.white, size: 18),
+                                          SizedBox(width: 6),
+                                          Text(
+                                            'Verified Specialists',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        'Psychologists, Psychiatrists & Therapists • Video, Voice & Chat consultations',
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(alpha: 0.9),
+                                          fontSize: 12,
+                                          height: 1.3,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.25),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: const Text(
+                                    'Consult',
+                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.1, duration: 350.ms),
+
+                        const SizedBox(height: AppTheme.spacingMedium),
+
                         // Grid of other tiles
                         GridView.count(
                           crossAxisCount: 2,
@@ -277,6 +363,26 @@ class PatientDashboardScreen extends StatelessWidget {
                               ),
                               onTap: () => showChatBottomSheet(context),
                               delay: 200,
+                            ),
+                            _buildTile(
+                              context: context,
+                              title: 'My Consultations',
+                              subtitle: 'Upcoming & Past',
+                              icon: Icons.calendar_month_rounded,
+                              gradient: const LinearGradient(
+                                colors: [
+                                  Color(0xFF6366F1),
+                                  Color(0xFF4F46E5),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const AppointmentsListScreen()),
+                              ),
+                              delay: 250,
                             ),
                             _buildTile(
                               context: context,
@@ -339,6 +445,43 @@ class PatientDashboardScreen extends StatelessWidget {
                               delay: 500,
                             ),
                           ],
+                        ),
+
+                        const SizedBox(height: AppTheme.spacingMedium),
+
+                        // Emergency Crisis Helpline Ribbon
+                        GestureDetector(
+                          onTap: () => CrisisResourcesSheet.show(context),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.redAccent.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.redAccent.withOpacity(0.25)),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.support_agent_rounded, color: Colors.redAccent, size: 22),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Need Immediate Support? 24/7 National Helplines',
+                                        style: TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold),
+                                      ),
+                                      Text(
+                                        'Tele-MANAS (14416) • KIRAN (1800-599-0019) • ERSS (112)',
+                                        style: TextStyle(color: Colors.redAccent, fontSize: 10),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Icon(Icons.arrow_forward_ios_rounded, color: Colors.redAccent, size: 14),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -579,6 +722,69 @@ class PatientDashboardScreen extends StatelessWidget {
                   MaterialPageRoute(
                       builder: (_) => const RedeemedRewardsScreen()),
                 );
+              },
+            ),
+
+            // Verified Specialists
+            ListTile(
+              leading: Icon(
+                Icons.verified_user_rounded,
+                color: isDark ? AppTheme.darkTextGray : AppTheme.textGray,
+              ),
+              title: Text(
+                'Verified Specialists',
+                style: TextStyle(
+                  color: isDark ? AppTheme.darkTextLight : AppTheme.textDark,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const ClinicianDirectoryScreen()),
+                );
+              },
+            ),
+
+            // My Consultations
+            ListTile(
+              leading: Icon(
+                Icons.calendar_month_rounded,
+                color: isDark ? AppTheme.darkTextGray : AppTheme.textGray,
+              ),
+              title: Text(
+                'My Consultations',
+                style: TextStyle(
+                  color: isDark ? AppTheme.darkTextLight : AppTheme.textDark,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const AppointmentsListScreen()),
+                );
+              },
+            ),
+
+            // 24/7 Crisis Support
+            ListTile(
+              leading: const Icon(
+                Icons.support_agent_rounded,
+                color: Colors.redAccent,
+              ),
+              title: const Text(
+                '24/7 Crisis Helplines',
+                style: TextStyle(
+                  color: Colors.redAccent,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                CrisisResourcesSheet.show(context);
               },
             ),
 
