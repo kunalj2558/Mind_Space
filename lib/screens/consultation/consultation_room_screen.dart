@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:hearme/core/theme/app_theme.dart';
 import 'package:hearme/core/theme/theme_provider.dart';
+import 'package:hearme/core/providers/auth_provider.dart';
 import 'package:hearme/core/widgets/glass_card.dart';
 import 'package:hearme/services/v2_service.dart';
 import 'package:hearme/screens/safety/crisis_resources_sheet.dart';
