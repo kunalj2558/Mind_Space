@@ -141,10 +141,12 @@ async function ensureSeedData() {
         const mockEmail = `demo.${doc.publicName.toLowerCase().replace(/[^a-z]/g, '')}@mindspace.health`;
         let user = await User.findOne({ email: mockEmail });
         if (!user) {
+          const salt = await bcrypt.genSalt(10);
+          const hashedPassword = await bcrypt.hash('password123', salt);
           user = new User({
             name: doc.publicName,
             email: mockEmail,
-            password: 'demopasswordhash123',
+            password: hashedPassword,
             role: 'doctor',
             uniqueCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
           });
