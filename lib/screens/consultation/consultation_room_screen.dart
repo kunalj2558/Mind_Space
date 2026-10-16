@@ -408,7 +408,7 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '$remotePartyRole: $remotePartyName',
+              isDoctor ? 'Patient: $patientName' : (doctorName.toLowerCase().startsWith('dr') ? doctorName : 'Dr. $doctorName'),
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               overflow: TextOverflow.ellipsis,
             ),

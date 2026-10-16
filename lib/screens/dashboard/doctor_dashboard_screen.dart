@@ -163,6 +163,15 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     );
   }
 
+  String _formatDoctorName(String? name) {
+    if (name == null || name.trim().isEmpty) return 'Doctor';
+    final trimmed = name.trim();
+    if (trimmed.toLowerCase().startsWith('dr.') || trimmed.toLowerCase().startsWith('dr ')) {
+      return trimmed;
+    }
+    return 'Dr. $trimmed';
+  }
+
   void _openRatesManagementSheet(BuildContext context, bool isDark) async {
     final profile = await V2Service.getDoctorProfile();
     if (!mounted) return;
@@ -203,12 +212,33 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Header (Zero overflow guaranteed via Expanded)
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Doctor Consultation Rates & Modes',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryOrange.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.medical_services_rounded, color: AppTheme.primaryOrange, size: 20),
+                    ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Consultation Rates & Modes',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            'Configure your telehealth practice rates',
+                            style: TextStyle(fontSize: 11, color: Colors.grey),
+                          ),
+                        ],
+                      ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close_rounded),
@@ -216,80 +246,120 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
+
+                // Clinical Intro Policy Notice
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryOrange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
+                    color: const Color(0xFF059669).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.2)),
                   ),
-                  child: const Text(
-                    'Per-minute rates apply automatically after the patient finishes their free initial intro (3 mins for Video/Voice, 5 mins for Chat).',
-                    style: TextStyle(fontSize: 11, color: AppTheme.primaryOrange),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.verified_outlined, color: Color(0xFF059669), size: 18),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Complimentary intro policy: 3 mins free for Video/Voice & 5 mins for Chat before your per-minute rate begins.',
+                          style: TextStyle(fontSize: 11, color: Color(0xFF059669), height: 1.3),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 14),
-                const Text('Offered Consultation Modes', style: TextStyle(fontWeight: FontWeight.bold)),
-                CheckboxListTile(
-                  title: const Text('Video Call Consultations'),
-                  value: allowVideo,
-                  activeColor: AppTheme.primaryOrange,
-                  onChanged: (val) => setSheetState(() => allowVideo = val ?? true),
-                ),
-                CheckboxListTile(
-                  title: const Text('Voice Call Consultations'),
-                  value: allowVoice,
-                  activeColor: AppTheme.primaryOrange,
-                  onChanged: (val) => setSheetState(() => allowVoice = val ?? true),
-                ),
-                CheckboxListTile(
-                  title: const Text('Live Chat Consultations'),
-                  value: allowChat,
-                  activeColor: AppTheme.primaryOrange,
-                  onChanged: (val) => setSheetState(() => allowChat = val ?? true),
+                const SizedBox(height: 16),
+
+                // Card 1: Video Consultation
+                _buildServiceModeCard(
+                  title: 'Video Consultation',
+                  subtitle: 'Face-to-face HD encrypted clinical session',
+                  icon: Icons.videocam_rounded,
+                  iconColor: const Color(0xFF6366F1),
+                  isEnabled: allowVideo,
+                  controller: rVideoMin,
+                  chips: [15, 20, 25, 35, 50],
+                  isDark: isDark,
+                  onToggle: (val) => setSheetState(() => allowVideo = val),
+                  onSelectChip: (val) => setSheetState(() => rVideoMin.text = val.toString()),
                 ),
                 const SizedBox(height: 12),
-                const Text('Set Your Per-Minute Rates (INR ₹ / min)', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: rVideoMin,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Video Rate', prefixText: '₹ ', suffixText: '/min'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextField(
-                        controller: rVoiceMin,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Voice Rate', prefixText: '₹ ', suffixText: '/min'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextField(
-                        controller: rChatMin,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Chat Rate', prefixText: '₹ ', suffixText: '/min'),
-                      ),
-                    ),
-                  ],
+
+                // Card 2: Voice Consultation
+                _buildServiceModeCard(
+                  title: 'Voice Call',
+                  subtitle: 'Private direct audio tele-consultation',
+                  icon: Icons.call_rounded,
+                  iconColor: const Color(0xFF059669),
+                  isEnabled: allowVoice,
+                  controller: rVoiceMin,
+                  chips: [10, 15, 18, 25, 30],
+                  isDark: isDark,
+                  onToggle: (val) => setSheetState(() => allowVoice = val),
+                  onSelectChip: (val) => setSheetState(() => rVoiceMin.text = val.toString()),
                 ),
-                const SizedBox(height: 14),
-                SwitchListTile(
-                  title: const Text('Available for Instant Consultations'),
-                  subtitle: const Text('Toggle your online availability badge for patients'),
-                  value: isAvailable,
-                  activeColor: const Color(0xFF059669),
-                  onChanged: (val) => setSheetState(() => isAvailable = val),
+                const SizedBox(height: 12),
+
+                // Card 3: Live Chat
+                _buildServiceModeCard(
+                  title: 'Live Chat Consultation',
+                  subtitle: 'Encrypted real-time text & health queries',
+                  icon: Icons.chat_bubble_rounded,
+                  iconColor: const Color(0xFFD97706),
+                  isEnabled: allowChat,
+                  controller: rChatMin,
+                  chips: [5, 8, 10, 15, 20],
+                  isDark: isDark,
+                  onToggle: (val) => setSheetState(() => allowChat = val),
+                  onSelectChip: (val) => setSheetState(() => rChatMin.text = val.toString()),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 16),
+
+                // Card 4: Instant Availability Beacon
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF282542) : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isAvailable ? const Color(0xFF059669).withValues(alpha: 0.3) : Colors.grey.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: isAvailable ? const Color(0xFF059669) : Colors.grey,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Available for Instant Consultations', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                            Text('Display your active green status to patients', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: isAvailable,
+                        activeColor: const Color(0xFF059669),
+                        onChanged: (val) => setSheetState(() => isAvailable = val),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Save Button
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton(
+                  child: ElevatedButton.icon(
                     onPressed: () async {
                       final modes = <String>[];
                       if (allowVideo) modes.add('video');
@@ -315,24 +385,144 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                         Navigator.pop(ctx);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Doctor per-minute rates & modes saved successfully!'),
+                            content: Row(
+                              children: [
+                                Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                                SizedBox(width: 8),
+                                Text('Consultation rates & modes saved successfully!'),
+                              ],
+                            ),
                             backgroundColor: Color(0xFF059669),
                           ),
                         );
                       }
                     },
+                    icon: const Icon(Icons.check_rounded, color: Colors.white, size: 20),
+                    label: const Text('Save Consultation Rates', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryOrange,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 2,
                     ),
-                    child: const Text('Save Consultation Rates', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildServiceModeCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color iconColor,
+    required bool isEnabled,
+    required TextEditingController controller,
+    required List<int> chips,
+    required bool isDark,
+    required ValueChanged<bool> onToggle,
+    required ValueChanged<int> onSelectChip,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF282542) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isEnabled ? iconColor.withValues(alpha: 0.35) : Colors.grey.withValues(alpha: 0.15),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: iconColor, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                    Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                  ],
+                ),
+              ),
+              Switch(
+                value: isEnabled,
+                activeColor: iconColor,
+                onChanged: onToggle,
+              ),
+            ],
+          ),
+          if (isEnabled) ...[
+            const Divider(height: 18),
+            Row(
+              children: [
+                const Text('Rate: ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                Container(
+                  width: 76,
+                  height: 38,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E1C33) : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+                  ),
+                  child: TextField(
+                    controller: controller,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    decoration: const InputDecoration(
+                      prefixText: '₹ ',
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.only(top: 8),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Text('/ min', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                const Spacer(),
+                Wrap(
+                  spacing: 4,
+                  children: chips.take(3).map((val) {
+                    final isSelected = controller.text == val.toString();
+                    return GestureDetector(
+                      onTap: () => onSelectChip(val),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isSelected ? iconColor : iconColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '₹$val',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? Colors.white : iconColor,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -400,7 +590,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                             ),
                           ),
                           Text(
-                            'Dr. ${auth.user?.name ?? 'Doctor'}',
+                            _formatDoctorName(auth.user?.name),
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
