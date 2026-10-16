@@ -18,7 +18,7 @@ import 'package:hearme/screens/profile/profile_screen.dart';
 import 'package:hearme/screens/welcome/welcome_screen.dart';
 import 'package:hearme/screens/appointments/appointments_list_screen.dart';
 import 'package:hearme/screens/consultation/consultation_room_screen.dart';
-import 'package:hearme/screens/wallet/wallet_screen.dart';
+import 'package:hearme/screens/doctor/doctor_earnings_screen.dart';
 import 'package:hearme/services/app_update_service.dart';
 
 class DoctorDashboardScreen extends StatefulWidget {
@@ -744,8 +744,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
 
                 _buildTile(
                   context: context,
-                  title: 'Earnings & Payout Wallet',
-                  subtitle: 'View consultation balance & bank payouts',
+                  title: 'Doctor Earnings & Profit Breakdown',
+                  subtitle: 'Itemized call & chat profit receipts & UPI payout',
                   icon: Icons.account_balance_wallet_rounded,
                   gradient: const LinearGradient(
                     colors: [Color(0xFF10B981), Color(0xFF059669)],
@@ -755,7 +755,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                   isDark: isDark,
                   onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const WalletScreen()),
+                    MaterialPageRoute(builder: (_) => const DoctorEarningsScreen()),
                   ),
                 ).animate().fadeIn(delay: 175.ms).slideX(begin: 0.1),
 

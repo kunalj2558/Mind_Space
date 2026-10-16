@@ -260,13 +260,62 @@ class V2Service {
   }
 
   /// Add money to in-app wallet from bank/UPI
-  static Future<Map<String, dynamic>> topUpWallet(double amount, {String? paymentMethod}) async {
+  static Future<Map<String, dynamic>> topUpWallet(double amount, {String? paymentMethod, String? utr}) async {
     return await ApiService.post(
       ApiConstants.v2WalletTopup,
       body: {
         'amount': amount,
-        'paymentMethod': paymentMethod ?? 'UPI',
+        'paymentMethod': paymentMethod ?? 'PhonePe UPI',
+        'utr': utr ?? 'UPI-${DateTime.now().millisecondsSinceEpoch}',
       },
     );
   }
+
+  /// Get patient mental health intake triage profile
+  static Future<Map<String, dynamic>> getIntake() async {
+    try {
+      final res = await ApiService.get(ApiConstants.v2IntakeMe);
+      return res['intake'] ?? {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// Save patient mental health intake triage profile
+  static Future<Map<String, dynamic>> saveIntake({
+    required String primaryConcern,
+    required int distressLevel,
+    required String duration,
+    required String preferredLanguage,
+    String? notes,
+  }) async {
+    return await ApiService.post(
+      ApiConstants.v2IntakeSave,
+      body: {
+        'primaryConcern': primaryConcern,
+        'distressLevel': distressLevel,
+        'duration': duration,
+        'preferredLanguage': preferredLanguage,
+        'notes': notes ?? '',
+      },
+    );
+  }
+
+  /// Get detailed doctor earnings breakdown & per-session profit receipts
+  static Future<Map<String, dynamic>> getDoctorEarningsDetailed() async {
+    try {
+      return await ApiService.get(ApiConstants.v2DoctorEarnings);
+    } catch (_) {
+      return {
+        'grossEarnings': 0,
+        'platformFees': 0,
+        'netEarnings': 0,
+        'todayEarnings': 0,
+        'weekEarnings': 0,
+        'completedConsultations': 0,
+        'sessionReceipts': [],
+      };
+    }
+  }
 }
+

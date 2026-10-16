@@ -341,10 +341,10 @@ class PatientDashboardScreen extends StatelessWidget {
                                     children: [
                                       const Row(
                                         children: [
-                                          Icon(Icons.verified_rounded, color: Colors.white, size: 18),
+                                          Icon(Icons.headset_mic_rounded, color: Colors.white, size: 18),
                                           SizedBox(width: 6),
                                           Text(
-                                            'Verified Specialists',
+                                            'Talk to Doctor (3 Mins Free)',
                                             style: TextStyle(
                                               color: Colors.white,
                                               fontSize: 18,
@@ -355,7 +355,7 @@ class PatientDashboardScreen extends StatelessWidget {
                                       ),
                                       const SizedBox(height: 6),
                                       Text(
-                                        'Psychologists, Psychiatrists & Therapists • Video, Voice & Chat consultations',
+                                        'Instant Video, Voice & Chat consultations with verified Psychiatrists & Psychologists • Free intro mins',
                                         style: TextStyle(
                                           color: Colors.white.withValues(alpha: 0.9),
                                           fontSize: 12,
@@ -373,7 +373,7 @@ class PatientDashboardScreen extends StatelessWidget {
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: const Text(
-                                    'Consult',
+                                    'Connect',
                                     style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                                   ),
                                 ),

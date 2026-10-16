@@ -116,7 +116,10 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
               const Text('The other participant has concluded this consultation session.'),
               const SizedBox(height: 12),
               Text('Paid Minutes: $paidMins min(s)'),
-              Text('Settled from Wallet: ₹$debited', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryOrange)),
+              if (endedBy == 'Patient')
+                Text('Doctor Net Profit: +₹${(paidMins * 20 * 0.9).round()} (Credited)', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF059669)))
+              else
+                Text('Settled from Wallet: ₹$debited', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryOrange)),
             ],
           ),
           actions: [
@@ -357,9 +360,9 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
                 Text('Free Intro Quota: $freeUsed minute(s)', style: const TextStyle(color: Color(0xFF059669))),
                 Text('Billable Paid Time: $paidMins minute(s)'),
                 const Divider(height: 16),
-                Text('Debited from Wallet: ₹$debited', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.primaryOrange)),
+                Text('Settlement: ₹$debited', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.primaryOrange)),
                 const SizedBox(height: 6),
-                const Text('Receipt logged to your wallet & billing ledger.', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                const Text('Receipt logged to your wallet & earnings ledger.', style: TextStyle(fontSize: 11, color: Colors.grey)),
               ],
             ),
             actions: [
@@ -393,14 +396,16 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
     final patientName = (patientObj is Map ? patientObj['name'] : null) ?? 'Patient';
     final prof = widget.appointment['professionalProfileId'] ?? {};
     final doctorName = prof['publicName'] ?? widget.appointment['professionalId']?['name'] ?? 'Doctor';
-
     final remotePartyName = isDoctor ? patientName : doctorName;
-    final remotePartyRole = isDoctor ? 'Patient' : 'Doctor';
-
     final mode = widget.appointment['mode'] ?? 'video';
     final int freeDurationSeconds = mode == 'chat' ? (5 * 60) : (3 * 60);
     final bool isFreePhase = _elapsedSeconds < freeDurationSeconds;
     final int freeRemainingSecs = isFreePhase ? (freeDurationSeconds - _elapsedSeconds) : 0;
+
+    final ratePerMin = (widget.appointment['rateSnapshot']?['ratePerMinute'] as num?)?.toInt() ?? 20;
+    final int paidMinutes = isFreePhase ? 0 : ((_elapsedSeconds - freeDurationSeconds) / 60).ceil();
+    final int doctorLiveProfit = (paidMinutes * ratePerMin * 0.90).round();
+    final int patientLiveBilled = paidMinutes * ratePerMin;
 
     return Scaffold(
       appBar: AppBar(
@@ -426,11 +431,13 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
                 Text(
                   isFreePhase
                       ? 'FREE INTRO • ${_formatTimer(freeRemainingSecs)} left'
-                      : 'PAY-AS-YOU-GO • ${_formatTimer(_elapsedSeconds)}',
+                      : (isDoctor
+                          ? 'PROFIT: ₹$doctorLiveProfit (+₹${(ratePerMin * 0.9).round()}/m) • ${_formatTimer(_elapsedSeconds)}'
+                          : 'BILLED: ₹$patientLiveBilled (₹$ratePerMin/m) • ${_formatTimer(_elapsedSeconds)}'),
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: isFreePhase ? const Color(0xFF059669) : AppTheme.primaryOrange,
+                    color: isFreePhase ? const Color(0xFF059669) : (isDoctor ? const Color(0xFF059669) : AppTheme.primaryOrange),
                   ),
                 ),
               ],

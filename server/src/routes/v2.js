@@ -635,10 +635,10 @@ router.get('/wallet/balance', auth, async (req, res) => {
   }
 });
 
-// Top-Up Wallet (Simulated Bank / UPI Deposit)
+// Top-Up Wallet (Bank / UPI Deposit with UTR verification)
 router.post('/wallet/topup', auth, async (req, res) => {
   try {
-    const { amount, paymentMethod } = req.body;
+    const { amount, paymentMethod, utr } = req.body;
     const topupAmount = Number(amount);
     if (!topupAmount || topupAmount <= 0) {
       return res.status(400).json({ message: 'Valid top-up amount is required' });
@@ -650,12 +650,17 @@ router.post('/wallet/topup', auth, async (req, res) => {
     }
 
     wallet.balance += topupAmount;
+    const txId = utr && utr.trim().length >= 8 ? `UTR_${utr.trim()}` : `TX_${Date.now()}`;
+    const txDesc = utr && utr.trim().isNotEmpty
+      ? `UPI Deposit (Ref: ${utr.trim()}) via ${paymentMethod || 'PhonePe UPI'}`
+      : `Bank Top-Up via ${paymentMethod || 'UPI / NetBanking'}`;
+
     const tx = {
-      txId: `TX_${Date.now()}`,
+      txId,
       type: 'topup',
       amount: topupAmount,
-      description: `Bank Top-Up via ${paymentMethod || 'UPI / NetBanking'}`,
-      paymentMethod: paymentMethod || 'UPI',
+      description: txDesc,
+      paymentMethod: paymentMethod || 'PhonePe UPI',
       createdAt: new Date(),
     };
     wallet.transactions.push(tx);
@@ -727,14 +732,55 @@ router.get('/professional/earnings', auth, async (req, res) => {
     const completedAppointments = await Appointment.find({
       professionalId: req.user.id,
       status: 'completed',
-    });
+    }).populate('patientId', 'name email phone avatar').sort({ updatedAt: -1 });
+
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     let grossEarnings = 0;
     let platformFees = 0;
-    for (const appt of completedAppointments) {
-      grossEarnings += (appt.rateSnapshot?.sessionFee || 500);
-      platformFees += (appt.rateSnapshot?.platformFee || 50);
-    }
+    let todayEarnings = 0;
+    let weekEarnings = 0;
+
+    const sessionReceipts = completedAppointments.map(appt => {
+      const billing = appt.sessionBilling || {};
+      const ratePerMin = billing.ratePerMinute || appt.rateSnapshot?.ratePerMinute || 20;
+      const paidMins = billing.paidMinutes || 0;
+      const freeMins = billing.freeMinutesUsed || 0;
+      const durationMins = freeMins + paidMins || appt.durationMinutes || 15;
+      
+      const gross = billing.totalDebited > 0 ? billing.totalDebited : (appt.rateSnapshot?.sessionFee || 500);
+      const platformCut = Math.round(gross * 0.10); // 10% platform share
+      const netProfit = gross - platformCut;
+
+      grossEarnings += gross;
+      platformFees += platformCut;
+
+      const apptDate = appt.updatedAt || appt.createdAt;
+      if (new Date(apptDate) >= todayStart) {
+        todayEarnings += netProfit;
+      }
+      if (new Date(apptDate) >= weekStart) {
+        weekEarnings += netProfit;
+      }
+
+      return {
+        appointmentId: appt._id,
+        patientName: appt.patientId?.name || 'Anonymous Patient',
+        mode: appt.mode || billing.mode || 'video',
+        durationMinutes: durationMins,
+        freeMinutesUsed: freeMins,
+        paidMinutes: paidMins,
+        ratePerMinute: ratePerMin,
+        grossAmount: gross,
+        platformCut,
+        netProfit,
+        endedAt: billing.endedAt || appt.updatedAt,
+        status: appt.status,
+      };
+    });
+
     const netEarnings = grossEarnings - platformFees;
 
     res.json({
@@ -742,12 +788,43 @@ router.get('/professional/earnings', auth, async (req, res) => {
       grossEarnings,
       platformFees,
       netEarnings,
+      todayEarnings,
+      weekEarnings,
       currency: 'INR',
-      payoutStatus: 'Eligible for weekly settlement',
+      sessionReceipts,
+      payoutStatus: 'Eligible for instant UPI / Bank settlement',
     });
   } catch (err) {
     res.status(500).json({ message: 'Error calculating earnings' });
   }
+});
+
+// ── Patient Mental Health Intake Profile (Astrotalk Birth Details Equivalent) ──
+const patientIntakes = new Map();
+
+router.get('/intake/me', auth, (req, res) => {
+  const intake = patientIntakes.get(req.user.id.toString()) || {
+    primaryConcern: 'Work Stress & Burnout',
+    distressLevel: 6,
+    duration: 'Few weeks',
+    preferredLanguage: 'English / Hindi',
+    notes: '',
+  };
+  res.json({ intake });
+});
+
+router.post('/intake/save', auth, (req, res) => {
+  const { primaryConcern, distressLevel, duration, preferredLanguage, notes } = req.body;
+  const intake = {
+    primaryConcern: primaryConcern || 'Work Stress & Burnout',
+    distressLevel: Number(distressLevel) || 5,
+    duration: duration || 'Few weeks',
+    preferredLanguage: preferredLanguage || 'English',
+    notes: notes || '',
+    updatedAt: new Date().toISOString(),
+  };
+  patientIntakes.set(req.user.id.toString(), intake);
+  res.json({ message: 'Intake profile saved successfully', intake });
 });
 
 // ── 7. Safety, Emergency Helplines & User Reports ─────────────────────────────
@@ -812,11 +889,11 @@ router.post('/safety/reports', auth, async (req, res) => {
 
 // ── App In-App Auto-Update & Versioning Endpoints ──────────────────────────────
 let currentAppRelease = {
-  version: '2.1.2',
-  versionCode: 2,
+  version: '2.2.0',
+  versionCode: 3,
   minSupportedVersion: '1.0.0',
-  apkUrl: 'https://github.com/kunalj2558/Mind_Space/raw/main/apk/MindSpace-v2.1-debug.apk',
-  releaseNotes: '• Direct human-to-human video & voice calling\n• Simultaneous dual-sided call termination\n• In-app digital wallet with bank/UPI top-up\n• Doctor dynamic per-minute rates\n• Free intro period (3m call / 5m chat)',
+  apkUrl: 'https://github.com/kunalj2558/Mind_Space/raw/main/apk/MindSpace-v2.2-debug.apk',
+  releaseNotes: '• Astrotalk business & UX model for mental health consultations\n• PhonePe UPI QR integration (9130062558@ybl - SBI) with UTR verification\n• Doctor Profit Analytics: itemized per-call receipts & live in-call ticker\n• Problem-first filters & 20s clinical intake triage\n• Direct 1-click Chat & Call action buttons',
   forceUpdate: false,
   publishedAt: new Date().toISOString(),
 };

@@ -67,6 +67,8 @@ class ApiConstants {
   static const String v2SafetyResources = '/v2/safety/resources';
   static const String v2SafetyReports = '/v2/safety/reports';
   static const String v2AppVersion = '/v2/app/version';
+  static const String v2IntakeMe = '/v2/intake/me';
+  static const String v2IntakeSave = '/v2/intake/save';
 
   // Current client build metadata
   static const String currentAppVersion = '2.1.0';
