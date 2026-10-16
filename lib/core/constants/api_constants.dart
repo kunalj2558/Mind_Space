@@ -66,4 +66,9 @@ class ApiConstants {
   static const String v2DoctorEarnings = '/v2/professional/earnings';
   static const String v2SafetyResources = '/v2/safety/resources';
   static const String v2SafetyReports = '/v2/safety/reports';
+  static const String v2AppVersion = '/v2/app/version';
+
+  // Current client build metadata
+  static const String currentAppVersion = '2.1.0';
+  static const int currentVersionCode = 1;
 }

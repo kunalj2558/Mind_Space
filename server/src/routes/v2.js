@@ -810,4 +810,30 @@ router.post('/safety/reports', auth, async (req, res) => {
   }
 });
 
+// ── App In-App Auto-Update & Versioning Endpoints ──────────────────────────────
+let currentAppRelease = {
+  version: '2.1.2',
+  versionCode: 2,
+  minSupportedVersion: '1.0.0',
+  apkUrl: 'https://github.com/kunalj2558/Mind_Space/raw/main/apk/MindSpace-v2.1-debug.apk',
+  releaseNotes: '• Direct human-to-human video & voice calling\n• Simultaneous dual-sided call termination\n• In-app digital wallet with bank/UPI top-up\n• Doctor dynamic per-minute rates\n• Free intro period (3m call / 5m chat)',
+  forceUpdate: false,
+  publishedAt: new Date().toISOString(),
+};
+
+router.get('/app/version', (req, res) => {
+  res.json(currentAppRelease);
+});
+
+router.post('/app/version', auth, (req, res) => {
+  const { version, versionCode, apkUrl, releaseNotes, forceUpdate } = req.body;
+  if (version) currentAppRelease.version = version;
+  if (versionCode) currentAppRelease.versionCode = versionCode;
+  if (apkUrl) currentAppRelease.apkUrl = apkUrl;
+  if (releaseNotes) currentAppRelease.releaseNotes = releaseNotes;
+  if (typeof forceUpdate === 'boolean') currentAppRelease.forceUpdate = forceUpdate;
+  currentAppRelease.publishedAt = new Date().toISOString();
+  res.json({ message: 'App version updated successfully', release: currentAppRelease });
+});
+
 module.exports = router;

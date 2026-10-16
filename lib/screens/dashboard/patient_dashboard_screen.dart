@@ -23,6 +23,8 @@ import 'package:hearme/screens/marketplace/clinician_directory_screen.dart';
 import 'package:hearme/screens/appointments/appointments_list_screen.dart';
 import 'package:hearme/screens/safety/crisis_resources_sheet.dart';
 import 'package:hearme/screens/wallet/wallet_screen.dart';
+import 'package:hearme/services/app_update_service.dart';
+import 'package:hearme/core/constants/api_constants.dart';
 
 class PatientDashboardScreen extends StatelessWidget {
   const PatientDashboardScreen({super.key});
@@ -33,6 +35,11 @@ class PatientDashboardScreen extends StatelessWidget {
     final lang = Provider.of<LocaleProvider>(context).languageCode;
     final auth = Provider.of<AuthProvider>(context);
     final coins = Provider.of<CoinsProvider>(context);
+
+    // Silently check for newer app builds from server
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AppUpdateService.checkForUpdatesSilently(context);
+    });
 
     return Scaffold(
       drawer: _buildDrawer(context, isDark, lang, auth),
@@ -873,6 +880,32 @@ class PatientDashboardScreen extends StatelessWidget {
               onTap: () {
                 Navigator.pop(context);
                 CrisisResourcesSheet.show(context);
+              },
+            ),
+
+            // Check for Updates
+            ListTile(
+              leading: const Icon(
+                Icons.system_update_rounded,
+                color: AppTheme.primaryOrange,
+              ),
+              title: Text(
+                'Check for Updates',
+                style: TextStyle(
+                  color: isDark ? AppTheme.darkTextLight : AppTheme.textDark,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                'v${ApiConstants.currentAppVersion} • Instant cloud updates',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? AppTheme.darkTextGray : AppTheme.textGray,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                AppUpdateService.checkForUpdatesManually(context);
               },
             ),
 

@@ -19,6 +19,7 @@ import 'package:hearme/screens/welcome/welcome_screen.dart';
 import 'package:hearme/screens/appointments/appointments_list_screen.dart';
 import 'package:hearme/screens/consultation/consultation_room_screen.dart';
 import 'package:hearme/screens/wallet/wallet_screen.dart';
+import 'package:hearme/services/app_update_service.dart';
 
 class DoctorDashboardScreen extends StatefulWidget {
   const DoctorDashboardScreen({super.key});
@@ -36,6 +37,11 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     super.initState();
     _loadIncomingRequests();
     _requestPoller = Timer.periodic(const Duration(seconds: 4), (_) => _loadIncomingRequests(silent: true));
+
+    // Silently check for newer app builds from server
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AppUpdateService.checkForUpdatesSilently(context);
+    });
   }
 
   @override
@@ -405,6 +411,11 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                           ),
                         ],
                       ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.system_update_rounded, size: 22),
+                      tooltip: 'Check for Updates',
+                      onPressed: () => AppUpdateService.checkForUpdatesManually(context),
                     ),
                     const ThemeToggleButton(),
                   ],
