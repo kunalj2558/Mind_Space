@@ -341,11 +341,11 @@ router.post('/appointments', auth, async (req, res) => {
 
     appointment.paymentOrderId = paymentOrder._id;
     appointment.paymentStatus = 'captured';
-    appointment.status = 'paid';
+    appointment.status = 'requested'; // Waiting for doctor confirmation
     await appointment.save();
 
     res.status(201).json({
-      message: 'Appointment scheduled and confirmed successfully',
+      message: 'Consultation request sent to doctor. Waiting for acceptance.',
       appointment,
       paymentOrder,
     });
@@ -426,6 +426,110 @@ router.post('/appointments/:id/cancel', auth, async (req, res) => {
     res.json({ message: 'Appointment cancelled and payment marked for refund', appointment });
   } catch (err) {
     res.status(500).json({ message: 'Error cancelling appointment' });
+  }
+});
+
+// Accept Consultation Request (Doctor only)
+router.post('/appointments/:id/accept', auth, async (req, res) => {
+  try {
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) return res.status(404).json({ message: 'Appointment not found' });
+    
+    if (appointment.professionalId.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Only the assigned clinician can accept this request' });
+    }
+
+    appointment.status = 'confirmed';
+    await appointment.save();
+    res.json({ message: 'Consultation request accepted by doctor', appointment });
+  } catch (err) {
+    res.status(500).json({ message: 'Error accepting consultation' });
+  }
+});
+
+// Reject/Decline Consultation Request (Doctor only)
+router.post('/appointments/:id/reject', auth, async (req, res) => {
+  try {
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) return res.status(404).json({ message: 'Appointment not found' });
+
+    if (appointment.professionalId.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    appointment.status = 'cancelled';
+    if (appointment.paymentOrderId) {
+      await PaymentOrder.findByIdAndUpdate(appointment.paymentOrderId, { status: 'refunded' });
+      appointment.paymentStatus = 'refunded';
+    }
+    await appointment.save();
+    res.json({ message: 'Consultation request declined', appointment });
+  } catch (err) {
+    res.status(500).json({ message: 'Error declining consultation' });
+  }
+});
+
+// Get Logged-in Doctor's Professional Profile & Rates
+router.get('/doctor/profile', auth, async (req, res) => {
+  try {
+    let profile = await ProfessionalProfile.findOne({ userId: req.user.id });
+    if (!profile) {
+      const user = await User.findById(req.user.id);
+      profile = await ProfessionalProfile.create({
+        userId: user._id,
+        publicName: user.name,
+        title: 'Psychiatrist',
+        specialty: 'Psychiatry & Wellbeing',
+        registrationNumber: 'REG-' + Math.floor(100000 + Math.random() * 900000),
+        consultationModes: ['chat', 'voice', 'video'],
+        rates: {
+          currency: 'INR',
+          ratePerMinute: 25,
+          session15Min: 350,
+          session30Min: 650,
+          session60Min: 1200,
+        },
+        isAvailableNow: true,
+      });
+    }
+    res.json({ profile });
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching doctor profile', error: err.message });
+  }
+});
+
+// Update Logged-in Doctor's Rates, Modes and Availability
+router.put('/doctor/profile', auth, async (req, res) => {
+  try {
+    const { rates, consultationModes, isAvailableNow, bio, title, specialty } = req.body;
+    let profile = await ProfessionalProfile.findOne({ userId: req.user.id });
+    if (!profile) {
+      return res.status(404).json({ message: 'Doctor profile not found' });
+    }
+
+    if (rates) {
+      profile.rates = {
+        currency: rates.currency || profile.rates.currency || 'INR',
+        ratePerMinute: Number(rates.ratePerMinute) || profile.rates.ratePerMinute,
+        session15Min: Number(rates.session15Min) || profile.rates.session15Min,
+        session30Min: Number(rates.session30Min) || profile.rates.session30Min,
+        session60Min: Number(rates.session60Min) || profile.rates.session60Min,
+      };
+    }
+    if (consultationModes && Array.isArray(consultationModes)) {
+      profile.consultationModes = consultationModes;
+    }
+    if (typeof isAvailableNow === 'boolean') {
+      profile.isAvailableNow = isAvailableNow;
+    }
+    if (bio !== undefined) profile.bio = bio;
+    if (title !== undefined) profile.title = title;
+    if (specialty !== undefined) profile.specialty = specialty;
+
+    await profile.save();
+    res.json({ message: 'Rates and consultation settings updated successfully', profile });
+  } catch (err) {
+    res.status(500).json({ message: 'Error updating doctor profile', error: err.message });
   }
 });
 

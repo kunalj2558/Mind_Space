@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:hearme/core/theme/app_theme.dart';
 import 'package:hearme/core/theme/theme_provider.dart';
 import 'package:hearme/core/widgets/glass_card.dart';
@@ -16,11 +18,20 @@ class AppointmentsListScreen extends StatefulWidget {
 class _AppointmentsListScreenState extends State<AppointmentsListScreen> {
   List<dynamic> _appointments = [];
   bool _isLoading = true;
+  Timer? _pollTimer;
 
   @override
   void initState() {
     super.initState();
     _loadAppointments();
+    // Auto-poll every 3.5 seconds to track doctor acceptances in real-time
+    _pollTimer = Timer.periodic(const Duration(milliseconds: 3500), (_) => _silentRefresh());
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadAppointments() async {
@@ -34,13 +45,23 @@ class _AppointmentsListScreenState extends State<AppointmentsListScreen> {
     }
   }
 
+  Future<void> _silentRefresh() async {
+    final list = await V2Service.getAppointments();
+    if (mounted) {
+      setState(() {
+        _appointments = list;
+      });
+    }
+  }
+
   Future<void> _cancelAppointment(String id) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Cancel Consultation?'),
         content: const Text(
-          'Are you sure you want to cancel this appointment? Refund will be processed as per policy.',
+          'Are you sure you want to cancel this appointment request? Refund will be processed as per policy.',
         ),
         actions: [
           TextButton(
@@ -50,7 +71,7 @@ class _AppointmentsListScreenState extends State<AppointmentsListScreen> {
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-            child: const Text('Cancel & Refund', style: TextStyle(color: Colors.white)),
+            child: const Text('Cancel Request', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -62,6 +83,71 @@ class _AppointmentsListScreenState extends State<AppointmentsListScreen> {
     }
   }
 
+  Future<void> _joinCallWithPermissions(String id, Map<String, dynamic> appointment) async {
+    final mode = appointment['mode'] ?? 'video';
+
+    // Verify and request hardware permissions before launching call
+    if (mode == 'video') {
+      final statuses = await [
+        Permission.camera,
+        Permission.microphone,
+      ].request();
+
+      if (statuses[Permission.camera]?.isGranted != true ||
+          statuses[Permission.microphone]?.isGranted != true) {
+        if (!mounted) return;
+        _showPermissionAlert('Camera & Microphone permissions are needed to start the video call.');
+        return;
+      }
+    } else if (mode == 'voice') {
+      final status = await Permission.microphone.request();
+      if (!status.isGranted) {
+        if (!mounted) return;
+        _showPermissionAlert('Microphone permission is needed to start the voice call.');
+        return;
+      }
+    }
+
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ConsultationRoomScreen(
+          appointmentId: id,
+          appointment: appointment,
+        ),
+      ),
+    );
+  }
+
+  void _showPermissionAlert(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Permissions Required'),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              openAppSettings();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryOrange),
+            child: const Text('Open Settings', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
@@ -71,6 +157,13 @@ class _AppointmentsListScreenState extends State<AppointmentsListScreen> {
         title: const Text('My Consultations'),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: _loadAppointments,
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
       body: Container(
         decoration: BoxDecoration(
@@ -120,23 +213,33 @@ class _AppointmentsListScreenState extends State<AppointmentsListScreen> {
   Widget _buildAppointmentCard(Map<String, dynamic> a, bool isDark) {
     final id = a['_id'] ?? '';
     final prof = a['professionalProfileId'] ?? {};
-    final profName = prof['publicName'] ?? 'Specialist';
-    final title = prof['title'] ?? 'Clinician';
+    final profName = prof['publicName'] ?? a['professionalId']?['name'] ?? 'Clinician';
+    final title = prof['title'] ?? 'Specialist';
     final mode = a['mode'] ?? 'video';
-    final status = a['status'] ?? 'scheduled';
+    final status = a['status'] ?? 'requested';
     final duration = a['durationMinutes'] ?? 30;
     final total = a['rateSnapshot']?['totalAmount'] ?? 600;
     final scheduledAt = a['scheduledAt'] != null
         ? DateTime.tryParse(a['scheduledAt'])
         : null;
 
-    final isJoinable = status == 'paid' || status == 'active' || status == 'ready';
+    final isRequested = status == 'requested';
+    final isConfirmed = status == 'confirmed' || status == 'paid' || status == 'active' || status == 'ready';
 
     Color statusColor = Colors.orange;
-    if (status == 'paid' || status == 'completed') {
-      statusColor = const Color(0xFF059669);
+    String statusLabel = 'REQUESTED';
+    if (isRequested) {
+      statusColor = const Color(0xFFD97706); // Amber
+      statusLabel = 'WAITING FOR DOCTOR';
+    } else if (isConfirmed) {
+      statusColor = const Color(0xFF059669); // Emerald
+      statusLabel = 'CONFIRMED';
+    } else if (status == 'completed') {
+      statusColor = Colors.blue;
+      statusLabel = 'COMPLETED';
     } else if (status == 'cancelled' || status == 'refunded') {
       statusColor = Colors.redAccent;
+      statusLabel = 'CANCELLED';
     }
 
     IconData modeIcon = Icons.videocam_rounded;
@@ -151,12 +254,12 @@ class _AppointmentsListScreenState extends State<AppointmentsListScreen> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppTheme.primaryOrange.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(modeIcon, color: AppTheme.primaryColor, size: 22),
+                child: Icon(modeIcon, color: AppTheme.primaryOrange, size: 24),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -186,11 +289,12 @@ class _AppointmentsListScreenState extends State<AppointmentsListScreen> {
                 decoration: BoxDecoration(
                   color: statusColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: statusColor.withOpacity(0.3)),
                 ),
                 child: Text(
-                  status.toString().toUpperCase(),
+                  statusLabel,
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 9,
                     fontWeight: FontWeight.bold,
                     color: statusColor,
                   ),
@@ -199,6 +303,42 @@ class _AppointmentsListScreenState extends State<AppointmentsListScreen> {
             ],
           ),
           const SizedBox(height: 12),
+
+          // Waiting status banner if doctor hasn't accepted yet
+          if (isRequested)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.withOpacity(isDark ? 0.12 : 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.amber.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.amber),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Request sent to $profName. Waiting for doctor to accept. Page will unlock automatically.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.amber.shade200 : Colors.amber.shade900,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           if (scheduledAt != null)
             Row(
               children: [
@@ -215,50 +355,72 @@ class _AppointmentsListScreenState extends State<AppointmentsListScreen> {
                 ),
                 const Spacer(),
                 Text(
-                  'Paid: ₹$total',
-                  style: TextStyle(
-                    fontSize: 12,
+                  '₹$total',
+                  style: const TextStyle(
+                    fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryColor,
+                    color: AppTheme.primaryOrange,
                   ),
                 ),
               ],
             ),
           const SizedBox(height: 14),
+
+          // Action buttons
           Row(
             children: [
-              if (isJoinable)
+              if (isConfirmed)
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ConsultationRoomScreen(
-                            appointmentId: id,
-                            appointment: a,
-                          ),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.meeting_room_rounded, size: 16),
-                    label: const Text('Enter Consultation'),
+                    onPressed: () => _joinCallWithPermissions(id, a),
+                    icon: Icon(
+                      mode == 'video'
+                          ? Icons.videocam_rounded
+                          : (mode == 'voice' ? Icons.phone_in_talk_rounded : Icons.chat_rounded),
+                      size: 18,
+                    ),
+                    label: Text(
+                      mode == 'video'
+                          ? 'Start Video Call'
+                          : (mode == 'voice' ? 'Start Voice Call' : 'Open Live Chat'),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
+                      backgroundColor: const Color(0xFF059669),
                       foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                )
+              else if (isRequested)
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: null, // Disabled until doctor accepts!
+                    icon: const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    label: const Text('Waiting for Doctor Acceptance...'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),
                 ),
-              if (isJoinable) const SizedBox(width: 10),
+              const SizedBox(width: 10),
               if (status != 'cancelled' && status != 'completed')
                 OutlinedButton(
                   onPressed: () => _cancelAppointment(id),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.redAccent,
                     side: const BorderSide(color: Colors.redAccent),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),

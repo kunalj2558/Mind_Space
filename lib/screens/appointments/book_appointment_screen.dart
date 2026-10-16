@@ -47,7 +47,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
 
     setState(() => _isSubmitting = true);
     try {
-      final res = await V2Service.bookAppointment(
+      await V2Service.bookAppointment(
         professionalProfileId: widget.professional['_id'],
         mode: _selectedMode,
         durationMinutes: _selectedDuration,
@@ -63,13 +63,13 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: const Row(
               children: [
-                Icon(Icons.check_circle, color: Color(0xFF059669)),
+                Icon(Icons.hourglass_top_rounded, color: AppTheme.primaryOrange),
                 SizedBox(width: 8),
-                Text('Booking Confirmed!'),
+                Text('Request Sent to Doctor!'),
               ],
             ),
             content: Text(
-              'Your $_selectedMode consultation with ${widget.professional['publicName']} has been scheduled and confirmed.',
+              'Your request for a $_selectedMode consultation has been sent to ${widget.professional['publicName']}.\n\nThe call session will unlock automatically as soon as the doctor accepts your request.',
             ),
             actions: [
               TextButton(
@@ -82,7 +82,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                     ),
                   );
                 },
-                child: const Text('View Consultations', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text('Track Request & Waiting Room', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryOrange)),
               ),
             ],
           ),

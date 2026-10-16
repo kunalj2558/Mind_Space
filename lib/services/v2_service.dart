@@ -205,4 +205,39 @@ class V2Service {
       return [];
     }
   }
+
+  /// Doctor accepts appointment request
+  static Future<Map<String, dynamic>> acceptAppointment(String id) async {
+    return await ApiService.post(ApiConstants.v2AppointmentAccept(id));
+  }
+
+  /// Doctor rejects appointment request
+  static Future<Map<String, dynamic>> rejectAppointment(String id) async {
+    return await ApiService.post(ApiConstants.v2AppointmentReject(id));
+  }
+
+  /// Get logged-in doctor profile and rates
+  static Future<Map<String, dynamic>?> getDoctorProfile() async {
+    try {
+      final res = await ApiService.get(ApiConstants.v2DoctorProfile);
+      return res['profile'];
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Update doctor rates and consultation modes
+  static Future<Map<String, dynamic>> updateDoctorProfile({
+    Map<String, dynamic>? rates,
+    List<String>? consultationModes,
+    bool? isAvailableNow,
+    String? bio,
+  }) async {
+    final body = <String, dynamic>{};
+    if (rates != null) body['rates'] = rates;
+    if (consultationModes != null) body['consultationModes'] = consultationModes;
+    if (isAvailableNow != null) body['isAvailableNow'] = isAvailableNow;
+    if (bio != null) body['bio'] = bio;
+    return await ApiService.put(ApiConstants.v2DoctorProfile, body: body);
+  }
 }

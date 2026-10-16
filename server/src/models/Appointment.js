@@ -37,6 +37,8 @@ const AppointmentSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: [
+      'requested',
+      'confirmed',
       'scheduled',
       'payment_pending',
       'paid',
@@ -49,7 +51,7 @@ const AppointmentSchema = new mongoose.Schema({
       'no_show',
       'refunded',
     ],
-    default: 'scheduled',
+    default: 'requested',
   },
   patientConsent: {
     emergencyAcknowledged: {
