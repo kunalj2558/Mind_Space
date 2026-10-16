@@ -385,8 +385,17 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final isDoctor = auth.user?.role == 'doctor';
+
+    final patientObj = widget.appointment['patientId'];
+    final patientName = (patientObj is Map ? patientObj['name'] : null) ?? 'Patient';
     final prof = widget.appointment['professionalProfileId'] ?? {};
-    final profName = prof['publicName'] ?? widget.appointment['professionalId']?['name'] ?? 'Doctor';
+    final doctorName = prof['publicName'] ?? widget.appointment['professionalId']?['name'] ?? 'Doctor';
+
+    final remotePartyName = isDoctor ? patientName : doctorName;
+    final remotePartyRole = isDoctor ? 'Patient' : 'Doctor';
+
     final mode = widget.appointment['mode'] ?? 'video';
     final int freeDurationSeconds = mode == 'chat' ? (5 * 60) : (3 * 60);
     final bool isFreePhase = _elapsedSeconds < freeDurationSeconds;
@@ -398,7 +407,7 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              profName,
+              '$remotePartyRole: $remotePartyName',
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               overflow: TextOverflow.ellipsis,
             ),
@@ -509,14 +518,14 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
                                   radius: 46,
                                   backgroundColor: const Color(0xFF2B2844),
                                   child: Text(
-                                    profName.isNotEmpty ? profName[0].toUpperCase() : 'D',
+                                    remotePartyName.isNotEmpty ? remotePartyName[0].toUpperCase() : (isDoctor ? 'P' : 'D'),
                                     style: const TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.bold),
                                   ),
                                 ),
                               ),
                               const SizedBox(height: 14),
                               Text(
-                                profName,
+                                remotePartyName,
                                 style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
                               ),
                               const SizedBox(height: 4),
@@ -531,11 +540,23 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
                                   const SizedBox(width: 6),
                                   Text(
                                     mode == 'video'
-                                        ? 'Encrypted HD Video Feed Connected'
-                                        : 'Encrypted HD Voice Feed Connected',
+                                        ? 'Direct Live Video Connected'
+                                        : 'Direct Live Voice Connected',
                                     style: const TextStyle(color: Colors.white70, fontSize: 12),
                                   ),
                                 ],
+                              ),
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.08),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  isDoctor ? 'Patient Direct Session' : 'Doctor Direct Session',
+                                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                                ),
                               ),
                             ],
                           ),
@@ -550,9 +571,9 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
                               child: const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.lock_rounded, color: Colors.greenAccent, size: 12),
+                                  Icon(Icons.verified_user_rounded, color: Colors.greenAccent, size: 12),
                                   SizedBox(width: 4),
-                                  Text('P2P WebRTC Secure', style: TextStyle(color: Colors.white70, fontSize: 10)),
+                                  Text('Doctor <-> Patient (No AI Bot)', style: TextStyle(color: Colors.white70, fontSize: 10)),
                                 ],
                               ),
                             ),
