@@ -93,7 +93,6 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
     }
 
     if (mounted) {
-      setState(() => _permissionsGranted = granted);
       _startSessionTimer();
     }
   }
