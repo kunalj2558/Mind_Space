@@ -22,6 +22,7 @@ import 'package:hearme/screens/welcome/welcome_screen.dart';
 import 'package:hearme/screens/marketplace/clinician_directory_screen.dart';
 import 'package:hearme/screens/appointments/appointments_list_screen.dart';
 import 'package:hearme/screens/safety/crisis_resources_sheet.dart';
+import 'package:hearme/screens/wallet/wallet_screen.dart';
 
 class PatientDashboardScreen extends StatelessWidget {
   const PatientDashboardScreen({super.key});
@@ -109,7 +110,7 @@ class PatientDashboardScreen extends StatelessWidget {
                       ),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
+                          horizontal: 10,
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
@@ -122,21 +123,58 @@ class PatientDashboardScreen extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(Icons.stars_rounded,
-                                color: Colors.white, size: 18),
+                                color: Colors.white, size: 16),
                             const SizedBox(width: 4),
                             Text(
                               '${coins.coins}',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w700,
-                                fontSize: 14,
+                                fontSize: 13,
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
+                    // Consultation Wallet shortcut
+                    GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const WalletScreen()),
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF0D9488), Color(0xFF059669)],
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.account_balance_wallet_rounded,
+                                color: Colors.white, size: 16),
+                            SizedBox(width: 4),
+                            Text(
+                              'Wallet',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
                     IconButton(
                       icon: const Icon(Icons.emergency_outlined, color: Colors.redAccent, size: 22),
                       tooltip: '24/7 Crisis Support',
@@ -443,6 +481,26 @@ class PatientDashboardScreen extends StatelessWidget {
                                     builder: (_) => const LinkDoctorScreen()),
                               ),
                               delay: 500,
+                            ),
+                            _buildTile(
+                              context: context,
+                              title: 'Consultation Wallet',
+                              subtitle: '₹ Balance & Top-up',
+                              icon: Icons.account_balance_wallet_rounded,
+                              gradient: const LinearGradient(
+                                colors: [
+                                  Color(0xFF0D9488),
+                                  Color(0xFF059669),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const WalletScreen()),
+                              ),
+                              delay: 550,
                             ),
                           ],
                         ),
@@ -765,6 +823,36 @@ class PatientDashboardScreen extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                       builder: (_) => const AppointmentsListScreen()),
+                );
+              },
+            ),
+
+            // Consultation Wallet
+            ListTile(
+              leading: const Icon(
+                Icons.account_balance_wallet_rounded,
+                color: Color(0xFF059669),
+              ),
+              title: Text(
+                'Consultation Wallet & Top-Up',
+                style: TextStyle(
+                  color: isDark ? AppTheme.darkTextLight : AppTheme.textDark,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                'Pay-As-You-Go telehealth balance',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? AppTheme.darkTextGray : AppTheme.textGray,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const WalletScreen()),
                 );
               },
             ),

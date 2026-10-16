@@ -18,6 +18,7 @@ import 'package:hearme/screens/profile/profile_screen.dart';
 import 'package:hearme/screens/welcome/welcome_screen.dart';
 import 'package:hearme/screens/appointments/appointments_list_screen.dart';
 import 'package:hearme/screens/consultation/consultation_room_screen.dart';
+import 'package:hearme/screens/wallet/wallet_screen.dart';
 
 class DoctorDashboardScreen extends StatefulWidget {
   const DoctorDashboardScreen({super.key});
@@ -161,10 +162,10 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     if (!mounted) return;
 
     final rates = profile?['rates'] ?? {};
-    final TextEditingController r15 = TextEditingController(text: '${rates['session15Min'] ?? 350}');
-    final TextEditingController r30 = TextEditingController(text: '${rates['session30Min'] ?? 650}');
-    final TextEditingController r60 = TextEditingController(text: '${rates['session60Min'] ?? 1200}');
-    final TextEditingController rPerMin = TextEditingController(text: '${rates['ratePerMinute'] ?? 25}');
+    final TextEditingController rVideoMin = TextEditingController(text: '${rates['ratePerMinuteVideo'] ?? 25}');
+    final TextEditingController rVoiceMin = TextEditingController(text: '${rates['ratePerMinuteVoice'] ?? 18}');
+    final TextEditingController rChatMin = TextEditingController(text: '${rates['ratePerMinuteChat'] ?? 10}');
+    final TextEditingController r30 = TextEditingController(text: '${rates['session30Min'] ?? 550}');
 
     List<String> currentModes = (profile?['consultationModes'] as List?)
             ?.map((e) => e.toString())
@@ -210,14 +211,18 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  'Set your consultation fees and offered modes. These will be charged to patients upon booking.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark ? Colors.white60 : Colors.black54,
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryOrange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    'Per-minute rates apply automatically after the patient finishes their free initial intro (3 mins for Video/Voice, 5 mins for Chat).',
+                    style: TextStyle(fontSize: 11, color: AppTheme.primaryOrange),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 const Text('Offered Consultation Modes', style: TextStyle(fontWeight: FontWeight.bold)),
                 CheckboxListTile(
                   title: const Text('Video Call Consultations'),
@@ -238,43 +243,31 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                   onChanged: (val) => setSheetState(() => allowChat = val ?? true),
                 ),
                 const SizedBox(height: 12),
-                const Text('Consultation Fares (INR ₹)', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text('Set Your Per-Minute Rates (INR ₹ / min)', style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(
                       child: TextField(
-                        controller: r15,
+                        controller: rVideoMin,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: '15 Min Fee (₹)', prefixText: '₹'),
+                        decoration: const InputDecoration(labelText: 'Video Rate', prefixText: '₹ ', suffixText: '/min'),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: TextField(
-                        controller: r30,
+                        controller: rVoiceMin,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: '30 Min Fee (₹)', prefixText: '₹'),
+                        decoration: const InputDecoration(labelText: 'Voice Rate', prefixText: '₹ ', suffixText: '/min'),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
+                    const SizedBox(width: 10),
                     Expanded(
                       child: TextField(
-                        controller: r60,
+                        controller: rChatMin,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: '60 Min Fee (₹)', prefixText: '₹'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: rPerMin,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Per Min Rate (₹)', prefixText: '₹'),
+                        decoration: const InputDecoration(labelText: 'Chat Rate', prefixText: '₹ ', suffixText: '/min'),
                       ),
                     ),
                   ],
@@ -297,12 +290,17 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                       if (allowVoice) modes.add('voice');
                       if (allowChat) modes.add('chat');
 
+                      final vMin = int.tryParse(rVideoMin.text) ?? 25;
+                      final voMin = int.tryParse(rVoiceMin.text) ?? 18;
+                      final cMin = int.tryParse(rChatMin.text) ?? 10;
+
                       await V2Service.updateDoctorProfile(
                         rates: {
-                          'session15Min': int.tryParse(r15.text) ?? 350,
-                          'session30Min': int.tryParse(r30.text) ?? 650,
-                          'session60Min': int.tryParse(r60.text) ?? 1200,
-                          'ratePerMinute': int.tryParse(rPerMin.text) ?? 25,
+                          'ratePerMinuteVideo': vMin,
+                          'ratePerMinuteVoice': voMin,
+                          'ratePerMinuteChat': cMin,
+                          'ratePerMinute': vMin,
+                          'session30Min': int.tryParse(r30.text) ?? (vMin * 20),
                         },
                         consultationModes: modes.isNotEmpty ? modes : ['video', 'voice', 'chat'],
                         isAvailableNow: isAvailable,
@@ -311,7 +309,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                         Navigator.pop(ctx);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Doctor rates and consultation modes updated successfully!'),
+                            content: Text('Doctor per-minute rates & modes saved successfully!'),
                             backgroundColor: Color(0xFF059669),
                           ),
                         );
@@ -530,7 +528,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                 _buildTile(
                   context: context,
                   title: 'My Consultation Rates & Modes',
-                  subtitle: 'Set your fees for 15m, 30m, 60m & enabled modes',
+                  subtitle: 'Set per-minute fees for Video, Voice & Chat',
                   icon: Icons.price_change_rounded,
                   gradient: const LinearGradient(
                     colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
@@ -540,6 +538,25 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                   isDark: isDark,
                   onTap: () => _openRatesManagementSheet(context, isDark),
                 ).animate().fadeIn(delay: 150.ms).slideX(begin: -0.1),
+
+                const SizedBox(height: AppTheme.spacingMedium),
+
+                _buildTile(
+                  context: context,
+                  title: 'Earnings & Payout Wallet',
+                  subtitle: 'View consultation balance & bank payouts',
+                  icon: Icons.account_balance_wallet_rounded,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF10B981), Color(0xFF059669)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  isDark: isDark,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const WalletScreen()),
+                  ),
+                ).animate().fadeIn(delay: 175.ms).slideX(begin: 0.1),
 
                 const SizedBox(height: AppTheme.spacingMedium),
 

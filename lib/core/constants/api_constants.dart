@@ -54,9 +54,12 @@ class ApiConstants {
   static String v2AppointmentReject(String id) => '/v2/appointments/$id/reject';
   static String v2AppointmentCancel(String id) => '/v2/appointments/$id/cancel';
   static const String v2DoctorProfile = '/v2/doctor/profile';
+  static String v2AppointmentStatus(String id) => '/v2/appointments/$id/status';
   static String v2CallToken(String id) => '/v2/appointments/$id/call-token';
   static String v2SessionStart(String id) => '/v2/sessions/$id/start';
   static String v2SessionEnd(String id) => '/v2/sessions/$id/end';
+  static const String v2WalletBalance = '/v2/wallet/balance';
+  static const String v2WalletTopup = '/v2/wallet/topup';
   static String v2AppointmentMessages(String id) =>
       '/v2/appointments/$id/messages';
   static const String v2PatientBilling = '/v2/patient/billing';

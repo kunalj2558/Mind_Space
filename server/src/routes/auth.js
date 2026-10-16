@@ -6,6 +6,8 @@ const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const Patient = require('../models/Patient');
 const Doctor = require('../models/Doctor');
+const ProfessionalProfile = require('../models/ProfessionalProfile');
+const Wallet = require('../models/Wallet');
 const generateUniqueCode = require('../utils/generateCode');
 
 // Register
@@ -54,7 +56,47 @@ router.post('/register', [
         userId: user._id, specialization, licenseNumber, hospital,
       });
       await doctor.save();
+
+      // Automatically sync doctor into Clinician Marketplace
+      const cleanSpecialty = specialization || 'Psychiatry & Wellbeing';
+      await ProfessionalProfile.create({
+        userId: user._id,
+        publicName: user.name,
+        title: cleanSpecialty.includes('Psychiat') ? 'Psychiatrist' : 'Clinical Psychologist',
+        specialty: cleanSpecialty,
+        registrationNumber: licenseNumber || `REG-${Math.floor(100000 + Math.random() * 900000)}`,
+        hospitalAffiliation: hospital || 'MindSpace Wellbeing Network',
+        verificationStatus: 'verified',
+        consultationModes: ['chat', 'voice', 'video'],
+        rates: {
+          currency: 'INR',
+          ratePerMinute: 20,
+          ratePerMinuteVideo: 25,
+          ratePerMinuteVoice: 18,
+          ratePerMinuteChat: 10,
+          session15Min: 300,
+          session30Min: 550,
+          session60Min: 999,
+        },
+        isAvailableNow: true,
+      });
     }
+
+    // Automatically initialize in-app digital wallet
+    await Wallet.create({
+      userId: user._id,
+      balance: role === 'patient' ? 500 : 0, // ₹500 welcome promo credit for testing
+      currency: 'INR',
+      transactions: role === 'patient' ? [
+        {
+          txId: `TX_${Date.now()}`,
+          type: 'topup',
+          amount: 500,
+          description: 'MindSpace Welcome Health Credit',
+          paymentMethod: 'Promo Credit',
+        }
+      ] : [],
+    });
 
     // Generate JWT (30-day expiry)
     const token = jwt.sign(

@@ -9,6 +9,7 @@ const Appointment = require('../models/Appointment');
 const PaymentOrder = require('../models/PaymentOrder');
 const ClinicianMessage = require('../models/ClinicianMessage');
 const SafetyReport = require('../models/SafetyReport');
+const Wallet = require('../models/Wallet');
 
 // ── Default Seed Data for Marketplace & Specialties ──────────────────────────
 const DEFAULT_SPECIALTIES = [
@@ -50,113 +51,12 @@ const DEFAULT_SPECIALTIES = [
   },
 ];
 
-// Seed specialties on launch if empty
+// Seed specialties on launch if empty (Real doctors register dynamically)
 async function ensureSeedData() {
   try {
     const count = await Specialty.countDocuments();
     if (count === 0) {
       await Specialty.insertMany(DEFAULT_SPECIALTIES);
-    }
-
-    // Ensure sample verified clinicians exist for immediate testing
-    const profCount = await ProfessionalProfile.countDocuments();
-    if (profCount === 0) {
-      const mockDoctors = [
-        {
-          publicName: 'Dr. Ananya Sharma',
-          title: 'Clinical Psychologist',
-          specialty: 'Clinical Psychologist',
-          qualifications: ['M.Phil in Clinical Psychology (NIMHANS)', 'RCI Registered'],
-          registrationNumber: 'RCI-CR-2019-8831',
-          registrationBody: 'Rehabilitation Council of India',
-          experienceYears: 8,
-          languages: ['English', 'Hindi'],
-          bio: 'Specializing in anxiety, work burnout, depressive disorders, and mindfulness-based stress reduction.',
-          hospitalAffiliation: 'Fortis Mental Health & MindSpace Clinic',
-          verificationStatus: 'verified',
-          consultationModes: ['chat', 'voice', 'video'],
-          rates: { currency: 'INR', ratePerMinute: 20, session15Min: 300, session30Min: 550, session60Min: 999 },
-          rating: 4.9,
-          reviewCount: 38,
-          isAvailableNow: true,
-        },
-        {
-          publicName: 'Dr. Rajesh Deshmukh',
-          title: 'Psychiatrist',
-          specialty: 'Psychiatrist',
-          qualifications: ['MBBS', 'MD (Psychiatry, KEM Hospital Mumbai)'],
-          registrationNumber: 'MCI-2015-44910',
-          registrationBody: 'Maharashtra Medical Council',
-          experienceYears: 12,
-          languages: ['English', 'Hindi', 'Marathi'],
-          bio: 'Expert in adult psychiatric evaluations, mood disorders, sleep disturbance, and neuro-psychiatry.',
-          hospitalAffiliation: 'Lilavati Hospital & Research Centre',
-          verificationStatus: 'verified',
-          consultationModes: ['voice', 'video'],
-          rates: { currency: 'INR', ratePerMinute: 35, session15Min: 500, session30Min: 900, session60Min: 1600 },
-          rating: 4.95,
-          reviewCount: 52,
-          isAvailableNow: true,
-        },
-        {
-          publicName: 'Sneha Patel, LPC',
-          title: 'Counsellor',
-          specialty: 'Counsellor & Therapist',
-          qualifications: ['M.A. Applied Psychology', 'Certified CBT Practitioner'],
-          registrationNumber: 'ICP-CP-2021-1204',
-          registrationBody: 'Indian Council of Professional Counsellors',
-          experienceYears: 5,
-          languages: ['English', 'Hindi', 'Gujarati'],
-          bio: 'Passionate about student mental wellness, relationship challenges, and self-compassion training.',
-          hospitalAffiliation: 'Aura Wellbeing Collective',
-          verificationStatus: 'verified',
-          consultationModes: ['chat', 'voice', 'video'],
-          rates: { currency: 'INR', ratePerMinute: 15, session15Min: 220, session30Min: 400, session60Min: 750 },
-          rating: 4.85,
-          reviewCount: 24,
-          isAvailableNow: true,
-        },
-        {
-          publicName: 'Dr. Vikramaditya Rao, PT',
-          title: 'Physiotherapist',
-          specialty: 'Physiotherapist',
-          qualifications: ['BPT', 'MPT (Musculoskeletal Disorders)'],
-          registrationNumber: 'IAP-L-39201',
-          registrationBody: 'Indian Association of Physiotherapists',
-          experienceYears: 7,
-          languages: ['English', 'Hindi', 'Telugu'],
-          bio: 'Relieving neck/shoulder stress tension, tension headaches, desk ergonomics, and spine wellness.',
-          hospitalAffiliation: 'Apollo Physical Medicine Center',
-          verificationStatus: 'verified',
-          consultationModes: ['voice', 'video'],
-          rates: { currency: 'INR', ratePerMinute: 18, session15Min: 250, session30Min: 450, session60Min: 800 },
-          rating: 4.88,
-          reviewCount: 19,
-          isAvailableNow: true,
-        },
-      ];
-
-      for (const doc of mockDoctors) {
-        // Create matching mock user
-        const mockEmail = `demo.${doc.publicName.toLowerCase().replace(/[^a-z]/g, '')}@mindspace.health`;
-        let user = await User.findOne({ email: mockEmail });
-        if (!user) {
-          const salt = await bcrypt.genSalt(10);
-          const hashedPassword = await bcrypt.hash('password123', salt);
-          user = new User({
-            name: doc.publicName,
-            email: mockEmail,
-            password: hashedPassword,
-            role: 'doctor',
-            uniqueCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
-          });
-          await user.save();
-        }
-        await ProfessionalProfile.create({
-          ...doc,
-          userId: user._id,
-        });
-      }
     }
   } catch (err) {
     console.warn('V2 ensureSeedData notice:', err.message);
@@ -579,39 +479,195 @@ router.post('/sessions/:id/start', auth, async (req, res) => {
   }
 });
 
-// End Realtime Session (Compute Server Billable Duration)
+// Lightweight Appointment Status Polling (for real-time dual-sided call termination)
+router.get('/appointments/:id/status', auth, async (req, res) => {
+  try {
+    const appointment = await Appointment.findById(req.params.id)
+      .select('status endedAt endedByRole freeMinutesAllowed freeMinutesUsed paidMinutes amountDebited');
+    if (!appointment) return res.status(404).json({ message: 'Appointment not found' });
+    res.json({
+      status: appointment.status,
+      endedAt: appointment.endedAt,
+      endedByRole: appointment.endedByRole,
+      freeMinutesAllowed: appointment.freeMinutesAllowed,
+      freeMinutesUsed: appointment.freeMinutesUsed,
+      paidMinutes: appointment.paidMinutes,
+      amountDebited: appointment.amountDebited,
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Error checking appointment status' });
+  }
+});
+
+// End Realtime Session (Compute Server Billable Duration & Settle In-App Wallet)
 router.post('/sessions/:id/end', auth, async (req, res) => {
   try {
     const { clinicalNotes } = req.body;
-    const appointment = await Appointment.findById(req.params.id);
+    const appointment = await Appointment.findById(req.params.id)
+      .populate('professionalProfileId');
     if (!appointment) return res.status(404).json({ message: 'Appointment not found' });
 
+    // Mark ended at once for dual-sided sync
     appointment.serverEndTime = new Date();
-    const startTime = appointment.serverStartTime ? new Date(appointment.serverStartTime) : new Date(Date.now() - 1800000);
-    const billableSeconds = Math.max(0, Math.floor((appointment.serverEndTime - startTime) / 1000));
-    
-    appointment.billableSeconds = billableSeconds;
+    appointment.endedAt = new Date();
+    appointment.endedByRole = req.user.role || 'patient';
     appointment.status = 'completed';
+
+    const startTime = appointment.serverStartTime ? new Date(appointment.serverStartTime) : new Date(Date.now() - 60000);
+    const billableSeconds = Math.max(0, Math.floor((appointment.serverEndTime - startTime) / 1000));
+    appointment.billableSeconds = billableSeconds;
+
+    // Free minutes quota: 5m for chat, 3m for voice & video
+    const mode = appointment.mode || 'video';
+    const freeAllowed = mode === 'chat' ? 5 : 3;
+    appointment.freeMinutesAllowed = freeAllowed;
+
+    const totalMinutes = Math.max(1, Math.ceil(billableSeconds / 60));
+    const freeMinutesUsed = Math.min(totalMinutes, freeAllowed);
+    const paidMinutes = Math.max(0, totalMinutes - freeMinutesUsed);
+
+    // Get doctor rate per minute for this specific mode
+    const prof = appointment.professionalProfileId || {};
+    const rates = prof.rates || {};
+    let ratePerMin = 20;
+    if (mode === 'video') ratePerMin = rates.ratePerMinuteVideo || rates.ratePerMinute || 25;
+    else if (mode === 'voice') ratePerMin = rates.ratePerMinuteVoice || rates.ratePerMinute || 18;
+    else if (mode === 'chat') ratePerMin = rates.ratePerMinuteChat || rates.ratePerMinute || 10;
+
+    const amountDebited = paidMinutes * ratePerMin;
+    appointment.freeMinutesUsed = freeMinutesUsed;
+    appointment.paidMinutes = paidMinutes;
+    appointment.amountDebited = amountDebited;
+
     if (clinicalNotes) {
       appointment.clinicalNotes = clinicalNotes;
     }
+
+    // Settle Patient Wallet & Doctor Wallet
+    if (amountDebited > 0) {
+      // Debit patient
+      const patientWallet = await Wallet.findOne({ userId: appointment.patientId });
+      if (patientWallet) {
+        patientWallet.balance = Math.max(0, patientWallet.balance - amountDebited);
+        patientWallet.transactions.push({
+          txId: `TX_${Date.now()}`,
+          type: 'session_debit',
+          amount: amountDebited,
+          description: `Paid ${paidMinutes}m session with ${prof.publicName || 'Doctor'} (${mode.toUpperCase()})`,
+          appointmentId: appointment._id,
+        });
+        await patientWallet.save();
+      }
+
+      // Credit doctor
+      let doctorWallet = await Wallet.findOne({ userId: appointment.professionalId });
+      if (!doctorWallet) {
+        doctorWallet = new Wallet({ userId: appointment.professionalId, balance: 0 });
+      }
+      doctorWallet.balance += amountDebited;
+      doctorWallet.transactions.push({
+        txId: `TX_${Date.now()}_D`,
+        type: 'doctor_payout',
+        amount: amountDebited,
+        description: `Consultation earnings for ${paidMinutes}m (${mode.toUpperCase()})`,
+        appointmentId: appointment._id,
+      });
+      await doctorWallet.save();
+    }
+
     await appointment.save();
 
-    const billableMinutes = Math.ceil(billableSeconds / 60);
-
     res.json({
-      message: 'Consultation ended and usage settled',
-      billableSeconds,
-      billableMinutes,
+      message: 'Consultation ended and settled successfully',
+      totalMinutes,
+      freeMinutesAllowed: freeAllowed,
+      freeMinutesUsed,
+      paidMinutes,
+      ratePerMinute: ratePerMin,
+      amountDebited,
       status: appointment.status,
+      endedByRole: appointment.endedByRole,
+      endedAt: appointment.endedAt,
       itemizedSummary: {
-        durationMinutes: billableMinutes,
-        totalCharged: appointment.rateSnapshot?.totalAmount || 0,
+        durationMinutes: totalMinutes,
+        freeMinutes: freeMinutesUsed,
+        paidMinutes: paidMinutes,
+        ratePerMinute: ratePerMin,
+        totalCharged: amountDebited,
         currency: 'INR',
       },
     });
   } catch (err) {
-    res.status(500).json({ message: 'Error ending session' });
+    console.error('Error ending session:', err);
+    res.status(500).json({ message: 'Error ending session', error: err.message });
+  }
+});
+
+// ── In-App Digital Wallet Endpoints ──────────────────────────────────────────
+
+// Get User Wallet Balance & Ledger
+router.get('/wallet/balance', auth, async (req, res) => {
+  try {
+    let wallet = await Wallet.findOne({ userId: req.user.id });
+    if (!wallet) {
+      wallet = await Wallet.create({
+        userId: req.user.id,
+        balance: req.user.role === 'patient' ? 500 : 0,
+        currency: 'INR',
+        transactions: req.user.role === 'patient' ? [
+          {
+            txId: `TX_${Date.now()}`,
+            type: 'topup',
+            amount: 500,
+            description: 'MindSpace Welcome Health Credit',
+            paymentMethod: 'Promo Credit',
+          }
+        ] : [],
+      });
+    }
+    res.json({
+      balance: wallet.balance,
+      currency: wallet.currency,
+      transactions: (wallet.transactions || []).reverse(),
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching wallet balance' });
+  }
+});
+
+// Top-Up Wallet (Simulated Bank / UPI Deposit)
+router.post('/wallet/topup', auth, async (req, res) => {
+  try {
+    const { amount, paymentMethod } = req.body;
+    const topupAmount = Number(amount);
+    if (!topupAmount || topupAmount <= 0) {
+      return res.status(400).json({ message: 'Valid top-up amount is required' });
+    }
+
+    let wallet = await Wallet.findOne({ userId: req.user.id });
+    if (!wallet) {
+      wallet = new Wallet({ userId: req.user.id, balance: 0, currency: 'INR' });
+    }
+
+    wallet.balance += topupAmount;
+    const tx = {
+      txId: `TX_${Date.now()}`,
+      type: 'topup',
+      amount: topupAmount,
+      description: `Bank Top-Up via ${paymentMethod || 'UPI / NetBanking'}`,
+      paymentMethod: paymentMethod || 'UPI',
+      createdAt: new Date(),
+    };
+    wallet.transactions.push(tx);
+    await wallet.save();
+
+    res.status(200).json({
+      message: `₹${topupAmount} added to your MindSpace wallet successfully!`,
+      balance: wallet.balance,
+      transaction: tx,
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Error processing wallet top-up' });
   }
 });
 

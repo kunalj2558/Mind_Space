@@ -235,32 +235,81 @@ class _ClinicianProfileScreenState extends State<ClinicianProfileScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Transparent Fee Breakdown
+              // Transparent Fee Breakdown & Free Intro Quota
               GlassCard(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Consultation Rates & Options',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : AppTheme.textDark,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Consultation Rates',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : AppTheme.textDark,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF059669).withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            'FREE INTRO',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF059669),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    // Free quota ribbon
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF059669).withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF059669).withOpacity(0.2)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.card_giftcard_rounded, color: Color(0xFF059669), size: 18),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'First 3 mins FREE on Video/Voice • First 5 mins FREE on Chat',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF059669),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 12),
-                    _buildRateRow('15-Minute Focus Session',
-                        '₹${rates['session15Min'] ?? 300}', isDark),
-                    const Divider(height: 16),
-                    _buildRateRow('30-Minute Full Consultation',
+                    _buildRateRow('Video Consultation',
+                        '₹${p['ratePerMinuteVideo'] ?? rates['ratePerMinuteVideo'] ?? 25} / min', isDark),
+                    const Divider(height: 14),
+                    _buildRateRow('Voice Call',
+                        '₹${p['ratePerMinuteVoice'] ?? rates['ratePerMinuteVoice'] ?? 18} / min', isDark),
+                    const Divider(height: 14),
+                    _buildRateRow('Live Chat Session',
+                        '₹${p['ratePerMinuteChat'] ?? rates['ratePerMinuteChat'] ?? 12} / min', isDark),
+                    const Divider(height: 14),
+                    _buildRateRow('Full Consultation (30 min)',
                         '₹${rates['session30Min'] ?? 550}', isDark),
-                    const Divider(height: 16),
-                    _buildRateRow('60-Minute Comprehensive Session',
-                        '₹${rates['session60Min'] ?? 999}', isDark),
                     const SizedBox(height: 8),
                     Text(
-                      'Per-minute rate: ₹${rates['ratePerMinute'] ?? 20}/min • Transparent billing with no hidden fees.',
+                      'Doctor-configured rates • Automatic wallet deduction with instant itemized settlement.',
                       style: TextStyle(
                         fontSize: 11,
                         color: isDark ? Colors.white54 : AppTheme.textLight,

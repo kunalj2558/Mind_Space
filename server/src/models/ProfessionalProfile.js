@@ -75,7 +75,19 @@ const ProfessionalProfileSchema = new mongoose.Schema({
     },
     ratePerMinute: {
       type: Number,
-      default: 20, // e.g. 20 INR / min
+      default: 20,
+    },
+    ratePerMinuteVideo: {
+      type: Number,
+      default: 25,
+    },
+    ratePerMinuteVoice: {
+      type: Number,
+      default: 18,
+    },
+    ratePerMinuteChat: {
+      type: Number,
+      default: 10,
     },
     session15Min: {
       type: Number,

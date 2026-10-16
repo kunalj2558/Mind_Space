@@ -240,4 +240,33 @@ class V2Service {
     if (bio != null) body['bio'] = bio;
     return await ApiService.put(ApiConstants.v2DoctorProfile, body: body);
   }
+
+  /// Lightweight real-time appointment status polling
+  static Future<Map<String, dynamic>?> getAppointmentStatus(String id) async {
+    try {
+      return await ApiService.get(ApiConstants.v2AppointmentStatus(id));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// In-App Wallet balance & transaction ledger
+  static Future<Map<String, dynamic>> getWalletBalance() async {
+    try {
+      return await ApiService.get(ApiConstants.v2WalletBalance);
+    } catch (_) {
+      return {'balance': 0, 'currency': 'INR', 'transactions': []};
+    }
+  }
+
+  /// Add money to in-app wallet from bank/UPI
+  static Future<Map<String, dynamic>> topUpWallet(double amount, {String? paymentMethod}) async {
+    return await ApiService.post(
+      ApiConstants.v2WalletTopup,
+      body: {
+        'amount': amount,
+        'paymentMethod': paymentMethod ?? 'UPI',
+      },
+    );
+  }
 }

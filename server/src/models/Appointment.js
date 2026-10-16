@@ -125,6 +125,29 @@ const AppointmentSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  freeMinutesAllowed: {
+    type: Number,
+    default: 3,
+  },
+  freeMinutesUsed: {
+    type: Number,
+    default: 0,
+  },
+  paidMinutes: {
+    type: Number,
+    default: 0,
+  },
+  amountDebited: {
+    type: Number,
+    default: 0,
+  },
+  endedByRole: {
+    type: String,
+    enum: ['patient', 'doctor', 'system'],
+  },
+  endedAt: {
+    type: Date,
+  },
   clinicalNotes: {
     type: String,
     default: '',

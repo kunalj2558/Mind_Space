@@ -208,7 +208,53 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                   _buildDurationCard(60, '60 min', isDark),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+
+              // Free Session Quota Benefit
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF059669).withOpacity(0.12),
+                      const Color(0xFF0D9488).withOpacity(0.08),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFF059669).withOpacity(0.25)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.card_giftcard_rounded, color: Color(0xFF059669), size: 22),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Complimentary Intro Period Included',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF059669),
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'First 3 mins free for Video/Voice & 5 mins free for Chat. Billing begins only if you choose to continue past the intro.',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF047857),
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
               // Transparent Itemized Bill
               GlassCard(
